@@ -25,18 +25,19 @@
 
 (defn wrap-twitter-oauth
   "Wraps `handler` to provide support for the Twitter OAuth sign-in process.
-  For this middleware to work correctly, the `compojure.handler/site` and
-  `ring.middleware.session/wrap-session` middlewares must precede it in the
-  middleware stack.
+  For this middleware to work, the `ring.middleware.session/wrap-session` and
+  `ring.middleware.keyword-params/wrap-keyword-params` middlewares must precede
+  it in the middleware stack.
 
   The `opts` parameter must be a map containing the following keys:
   :consumer-key – The application's consumer key.
   :consumer-secret – The application's consumer secret.
-  :request-token-uri – The URI that will prompt users to sign in with Twitter.
-  :access-token-uri – The URI that the Twitter OAuth servers will access once
-    the user has decided whether to sign in with Twitter.
-  :after-auth-uri – The URI to which users will be redirected once they finish
-    signing in with Twitter.
+  :sign-in-uri – When a user accesses this URI, they will be prompted to sign
+    in with Twitter.
+  :callback-uri – Once the user has decided whether to sign in with Twitter,
+    they will be redirected to this URI.
+  :finished-uri – Once the sign-in process is complete, the user will be
+    redirected to this URI.
 
   Once a user has successfully signed in with Twitter, the `:twitter` key in
   their session data will point at a map containing the following keys:
@@ -45,18 +46,16 @@
   :screen-name – The screen name of the user's Twitter account.
   :user-id – The user ID of the user's Twitter account."
   [handler opts]
-  (let [{:keys [request-token-uri
-                access-token-uri
-                after-auth-uri]} opts
+  (let [{:keys [sign-in-uri callback-uri finished-uri]} opts
         consumer (make-consumer opts)
         pending-request-tokens (atom {})]
     (fn [req]
       (condp = (:uri req)
         ;; Step 1: Acquire a request token for the user. Then redirect them to
         ;; the "Sign in with Twitter" page on Twitter's servers.
-        request-token-uri
-        (let [callback-uri  (str (base-url req) access-token-uri)
-              request-token (oauth/request-token consumer callback-uri)
+        sign-in-uri
+        (let [callback-url  (str (base-url req) callback-uri)
+              request-token (oauth/request-token consumer callback-url)
               oauth-token   (:oauth_token request-token)
               approval-uri  (oauth/user-approval-uri consumer oauth-token)]
           (swap! pending-request-tokens assoc oauth-token request-token)
@@ -64,12 +63,12 @@
         ;; Step 2: Convert the request token into an access token. Store the
         ;; access token and other Twitter data in the user's session data under
         ;; the :twitter key. Then redirect the user to the :after-auth-uri.
-        access-token-uri
+        callback-uri
         (let [params (:params req)]
           (if-let [denied (:denied params)]
             ;; the user decided not to sign in to Twitter
             (do (swap! pending-request-tokens dissoc denied)
-                (response/redirect after-auth-uri))
+                (response/redirect finished-uri))
             ;; the user decided to sign in to Twitter
             (let [oauth-token (:oauth_token params)]
               (if-let [request-token (get @pending-request-tokens oauth-token)]
@@ -78,13 +77,13 @@
                       access-token (oauth/access-token consumer request-token verifier)
                       oauth-creds  (make-oauth-creds consumer access-token)]
                   (swap! pending-request-tokens dissoc oauth-token)
-                  (-> (response/redirect after-auth-uri)
+                  (-> (response/redirect finished-uri)
                       (assoc-in [:session :twitter]
                         {:oauth-creds oauth-creds
                          :screen-name (:screen_name access-token)
                          :user-id     (:user_id access-token)})))
                 ;; this request doesn't correspond to a pending request token
                 (do (println "No such request token!")
-                    (response/redirect after-auth-uri))))))
+                    (response/redirect finished-uri))))))
         ;else
         (handler req)))))
