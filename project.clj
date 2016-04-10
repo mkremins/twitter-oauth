@@ -1,4 +1,6 @@
 (defproject mkremins/twitter-oauth "0.0-SNAPSHOT"
+  :description "Ring middleware for the Twitter OAuth sign-in flow"
+  :url "https://github.com/mkremins/twitter-oauth"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"
             :distribution :repo}
