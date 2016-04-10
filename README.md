@@ -18,21 +18,22 @@ First, if you haven't already, create an application at [apps.twitter.com](https
 
 ```clojure
 (ns whatever
-  (:require [compojure.handler]
+  (:require [ring.middleware.keyword-params]
             [ring.middleware.session]
             [twitter-oauth.middleware]))
 
 ...
 
-(-> my-ring-handler ;; this can be a Compojure `defroutes` or whatever else you want
-    (compojure.handler/site) ;; or any other middleware that provides a :params map with keyword keys
-    (ring.middleware.session/wrap-session)
-    (twitter-oauth.middleware/wrap-twitter-oauth
-      {:consumer-key      "consumer key"
-       :consumer-secret   "consumer secret"
-       :request-token-uri "/sign-in"
-       :access-token-uri  "/oauth-callback"
-       :after-auth-uri    "/"}))
+(def app
+  (-> my-ring-handler ;; this can be a Compojure `defroutes` or whatever else you want
+      (twitter-oauth.middleware/wrap-twitter-oauth
+        {:consumer-key    "consumer key"
+         :consumer-secret "consumer secret"
+         :sign-in-uri     "/sign-in"
+         :callback-uri    "/oauth-callback"
+         :finished-uri    "/"})
+      (ring.middleware.session/wrap-session)
+      (ring.middleware.keyword-params/wrap-keyword-params)))
 ```
 
 ## License
