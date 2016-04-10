@@ -34,3 +34,7 @@ First, if you haven't already, create an application at [apps.twitter.com](https
        :access-token-uri  "/oauth-callback"
        :after-auth-uri    "/"}))
 ```
+
+## License
+
+[MIT License](https://opensource.org/licenses/MIT). Hack away.
