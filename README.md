@@ -4,10 +4,10 @@
 
 ## Installation
 
-This project isn't on Clojars yet, so you'll have to download it and `lein install` the repo locally. Then add it to your `project.clj`'s `:dependencies`:
+Add it to your `project.clj`'s `:dependencies`:
 
 ```clojure
-[mkremins/twitter-oauth "0.0-SNAPSHOT"]
+[mkremins/twitter-oauth "0.1.0"]
 ```
 
 ## Usage
